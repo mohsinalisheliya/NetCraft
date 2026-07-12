@@ -22,7 +22,9 @@ from rest_framework.response import Response
 from apps.app_core.serializers import *
 from .models import *
 
-
+import sys
+import importlib.util
+from django.utils import timezone
 
 # VIEWS STARTING HERE
 
@@ -167,7 +169,6 @@ def install_update_api(request):
         return Response({"error": "Update install karne mein fail ho gaya.", "details": str(e)}, status=500)
     
 # -------------------- OFFLINE MANUAL PATCHER (UPDATE / ROLLBACK) --------------------
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def manual_update_api(request):
@@ -176,9 +177,6 @@ def manual_update_api(request):
         return Response({"error": "Kripya .zip file upload karein."}, status=400)
 
     update_file = request.FILES['update_file']
-    
-    # User batayega ki wo kaunsa version upload kar raha hai (e.g., "1.1.1" for rollback or "1.1.2" for update)
-    target_version = request.data.get('version_number', 'Unknown Version')
 
     # Security check: Sirf .zip file allow karni hai
     if not update_file.name.endswith('.zip'):
@@ -187,34 +185,118 @@ def manual_update_api(request):
     try:
         project_root = settings.BASE_DIR 
         
-        # 2. Extract & Overwrite Files directly from uploaded memory
-        print(f"Applying offline patch for version {target_version}...")
+        # 2. Extract & Overwrite Files
+        print("Applying offline patch and replacing files...")
         with zipfile.ZipFile(update_file) as z:
-            z.extractall(project_root) # Nayi files purani files ko replace kar dengi
+            z.extractall(project_root) 
 
-        # 3. Run Database Migrations (Agar naye update mein DB changes hain)
-        # (Rollback ke time par migrations safe rehte hain, errors nahi aate)
+        # 3. Run Database Migrations
         print("Running database sync...")
         call_command('migrate')
 
-        # 4. Update the Database Version Tracker
+        # ---------------------------------------------------------
+        # 4. 🔥 TERA VERSION.PY WALA JAADU YAHAN CHALEGA 🔥
+        # ---------------------------------------------------------
+        version_file_path = os.path.join(project_root, 'version.py')
+        
+        if os.path.exists(version_file_path):
+            # Pythonic way to load the file without restarting the server
+            spec = importlib.util.spec_from_file_location("version", version_file_path)
+            version_module = importlib.util.module_from_spec(spec)
+            sys.modules["version"] = version_module
+            spec.loader.exec_module(version_module)
+
+            # Naye version ki details file se utha lo
+            target_version = getattr(version_module, 'APP_VERSION', 'Unknown')
+            features_list = getattr(version_module, 'APP_VERSION_FEATURES', [])
+            new_features = "\n".join(features_list) # Array ko text bana diya
+        else:
+            # Agar kisi wajah se version.py nahi milti (Fall back)
+            target_version = "Unknown Update"
+            new_features = "No release notes found in update file."
+
+        # 5. Update the Database Version Tracker
         system_version = SystemVersion.objects.first()
         if system_version:
             old_version = system_version.current_version
             system_version.current_version = target_version
+            system_version.release_notes = new_features
             system_version.is_update_available = False # Update apply ho gaya
             system_version.latest_version = None
             system_version.save()
         else:
             old_version = "None"
-            SystemVersion.objects.create(current_version=target_version)
+            SystemVersion.objects.create(
+                current_version=target_version,
+                release_notes=new_features
+            )
 
         return Response({
             "status": "Success",
             "message": f"NetCraft successfully patched from {old_version} to {target_version}!",
-            "rollback_info": "Agar aapne purana version upload kiya hai, toh system successfully downgrade ho chuka hai.",
-            "note": "Kripya system/server ko ek baar restart zaroor karein."
+            "new_features": new_features,
+            "rollback_info": "Agar aapne purana version upload kiya hai, toh system downgrade ho chuka hai.",
+            "note": "Kripya system/server ko ek baar restart zaroor karein naye features dekhne ke liye."
         })
 
     except Exception as e:
         return Response({"error": "Patch apply karne mein fail ho gaya.", "details": str(e)}, status=500)
+
+# -------------------- ABOUT SYSTEM (MASTER INFO API) --------------------
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def system_info_api(request):
+    try:
+        # 1. License Data Fetch Kar
+        license_data = SystemLicense.objects.first()
+        
+        # 2. Database Version Data Fetch Kar
+        version_data = SystemVersion.objects.first()
+        
+        # 3. version.py se "Release Date" Live read kar
+        release_date = "Unknown"
+        version_file_path = os.path.join(settings.BASE_DIR, 'version.py')
+        if os.path.exists(version_file_path):
+            spec = importlib.util.spec_from_file_location("version", version_file_path)
+            version_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(version_module)
+            release_date = getattr(version_module, 'APP_RELEASE_DATE', 'Unknown')
+
+        # 4. 🔥 THE EXPIRY CALCULATOR LOGIC 🔥
+        remaining_days = 0
+        show_expiry_warning = False
+        expiry_date_str = "Lifetime"
+
+        if license_data and license_data.expiry_date:
+            today = timezone.now().date()
+            delta = license_data.expiry_date - today
+            remaining_days = delta.days if delta.days > 0 else 0
+            expiry_date_str = license_data.expiry_date.strftime("%d %B %Y")
+            
+            # Agar 30 ya usse kam din bache hain (par 0 se zyada), toh warning on kar do
+            if 0 < remaining_days <= 30:
+                show_expiry_warning = True
+
+        # 5. Data Format for React Frontend
+        response_data = {
+            "license_info": {
+                "hardware_mac": license_data.hardware_mac if license_data else "Not Registered",
+                "secret_key": f"********{license_data.license_key[-4:]}" if license_data and license_data.license_key else "Missing",
+                "status": "Active" if license_data and license_data.is_active else "Inactive",
+                "allowed_modules": license_data.allowed_modules if license_data else [],
+                "expiry_date": expiry_date_str,
+                "remaining_days": remaining_days,
+                "show_expiry_warning": show_expiry_warning
+            },
+            "version_info": {
+                "current_version": version_data.current_version if version_data else "v1.0.0",
+                "release_date": release_date,
+                "install_date": version_data.install_date.strftime("%d %B %Y, %I:%M %p") if version_data and version_data.install_date else "Unknown",
+                "release_notes": version_data.release_notes if version_data else ""
+            }
+        }
+
+        return Response(response_data)
+
+    except Exception as e:
+        return Response({"error": "Failed to load system info", "details": str(e)}, status=500)

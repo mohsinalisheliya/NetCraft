@@ -142,6 +142,7 @@ class SystemVersion(models.Model):
     latest_version = models.CharField(max_length=50, blank=True, null=True, verbose_name="Latest Available Version")
     release_notes = models.TextField(blank=True, null=True, help_text="Naye update mein kya features aaye hain")
     download_url = models.URLField(blank=True, null=True, help_text="Naye update ki .zip file ka link")
+    install_date = models.DateTimeField(auto_now=True, verbose_name="Last Installed On")
 
     class Meta:
         verbose_name = "System Version & Update"
