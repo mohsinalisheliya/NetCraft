@@ -31,7 +31,7 @@ class Customer(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     is_closed = models.BooleanField(default=False)
-
+    custom_data = models.JSONField(default=dict, blank=True, help_text="Stores dynamic drag-and-drop form data")
     def __str__(self):
         return self.customer_name
 
@@ -56,3 +56,4 @@ class CustomerAttachment(models.Model):
 
     class Meta:
         ordering = ['-uploaded_at']
+

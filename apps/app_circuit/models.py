@@ -63,6 +63,7 @@ class Circuit(models.Model):
     attachment_name = models.CharField(max_length=255, blank=True, null=True, help_text="Original filename")
     created_at = models.DateTimeField(auto_now_add=True)
     comments = models.JSONField(default=list, blank=True, help_text="Store comments in JSON format")
+    custom_data = models.JSONField(default=dict, blank=True, help_text="Stores dynamic drag-and-drop form data")
     activation_on_hold = models.BooleanField(default=False, verbose_name="Activation On Hold")
     activation_hold_reason = models.TextField(blank=True, null=True)
     deactivation_extension_days = models.IntegerField(default=0)

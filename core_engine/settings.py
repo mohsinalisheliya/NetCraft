@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 
+import rest_framework
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,6 +42,7 @@ INSTALLED_APPS = [
     
     # Third-party Modules
     'rest_framework',
+    'django_filters',
 
     #apps Modules
     "apps.app_circuit",
@@ -62,6 +65,7 @@ MIDDLEWARE = [
 
     # Custom Middleware for License Validation
     "apps.app_core.middleware.LicenseMiddleware",
+    "apps.app_core.middleware.CurrentUserMiddleware",
 ]
 
 ROOT_URLCONF = "core_engine.urls"
@@ -121,7 +125,18 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         # Iska matlab bina valid Token ke API par No Entry!
         'rest_framework.permissions.IsAuthenticated', 
-    )
+    ),
+
+    # 2. THE PAGINATION SYSTEM
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,  # React ko ek baar mein sirf 20 records milenge
+    
+    # 3. THE GLOBAL FILTER SYSTEM
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ),
 }
 
 

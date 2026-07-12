@@ -100,6 +100,7 @@ class SystemLicense(models.Model):
     license_key = models.CharField(max_length=500, unique=True, verbose_name="System License Key")
     hardware_mac = models.CharField(max_length=100, blank=True, null=True, help_text="System Hardware ID (Auto-captured)")
     
+    allowed_modules = models.JSONField(default=list, help_text="Drag & Drop me select kiye gaye modules ki list")
     # TERA NAYA BLUEPRINT YAHAN HAI
     PLAN_CHOICES = [
         ('7 Days Trial', '7 Days Trial (Free)'),

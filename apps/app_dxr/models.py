@@ -62,6 +62,7 @@ class DxR(models.Model):
     power_kva = models.FloatField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    custom_data = models.JSONField(default=dict, blank=True, help_text="Stores dynamic drag-and-drop form data")
 
     def save(self, *args, **kwargs):
         if not self.dxr_id:
