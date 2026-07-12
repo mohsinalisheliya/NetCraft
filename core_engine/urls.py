@@ -28,9 +28,12 @@ urlpatterns = [
     path('circuit/', include('apps.app_circuit.urls')),
     path('dxr/', include('apps.app_dxr.urls')),
 
+    #API Endpoints
     path('api/crm/', include('apps.app_crm.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/network/', include('apps.app_network.urls')), 
     path('api/provider/', include('apps.app_provider.urls')),
+    
+
 ]
