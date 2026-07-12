@@ -13,6 +13,6 @@ APP_VERSION_FEATURES = [
     "Initial Release: NetCraft Core Engine Activated.",
     "Module Setup: CRM, Circuit, DxR, Network, and Provider modules are fully live.",
     "Dynamic Fields: Drag-and-drop form support via JSONField ready.",
-    "Security: Hardware MAC locking and JWT authentication enabled.",
+    "Security: JWT authentication enabled.",
     "Offline Patcher: 1-Click install and rollback system introduced."
 ]
