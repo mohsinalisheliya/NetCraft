@@ -30,3 +30,7 @@ staticfiles/
 Thumbs.db
 
 notes_for_netcraft.txt
+
+
+# Ignore Auto Push Script
+auto_push.py
