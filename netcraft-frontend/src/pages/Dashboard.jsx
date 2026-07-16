@@ -6,7 +6,8 @@ import {
 
 function Dashboard() {
   const [isDark, setIsDark] = useState(true);
-  const [themeName, setThemeName] = useState('enterprise'); 
+  // LocalStorage se save ki hui theme uthao, warna default 'enterprise' rakh lo
+  const [themeName, setThemeName] = useState(localStorage.getItem('netcraft_theme') || 'enterprise');
 
   const themes = {
     retro: { 

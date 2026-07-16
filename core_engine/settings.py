@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     # Third-party Modules
     'rest_framework',
     'django_filters',
+    'corsheaders',
 
     #apps Modules
     "apps.app_circuit",
@@ -55,6 +56,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -124,7 +126,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         # Iska matlab bina valid Token ke API par No Entry!
-        'rest_framework.permissions.IsAuthenticated', 
+        'rest_framework.permissions.AllowAny', 
     ),
 
     # 2. THE PAGINATION SYSTEM
@@ -138,6 +140,11 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ),
 }
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 
 # Internationalization
