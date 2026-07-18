@@ -1,7 +1,8 @@
 # version.py
 
-# Lowest starting version
-APP_VERSION = "1.0.0" 
+SOFTWARE_NAME = "NetCraft"
+SOFTWARE_VERSION = "1.0.0"
+BUILD_CODENAME = "Enterprise Middleware"
 
 # Release Date: Jis din tu isko release/upload karega (e.g., Today)
 APP_RELEASE_DATE = "July 12, 2026" 

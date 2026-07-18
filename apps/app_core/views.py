@@ -6,8 +6,7 @@ from django.conf import settings
 from django.core.management import *
 from rest_framework.decorators import *
 
-import os
-import zipfile
+
 from django.conf import settings
 from django.core.management import call_command
 from rest_framework.decorators import api_view, permission_classes
@@ -25,6 +24,50 @@ from .models import *
 import sys
 import importlib.util
 from django.utils import timezone
+
+#--------------------------[Software Name & Version]-----------------------------------
+from rest_framework.permissions import AllowAny
+from rest_framework import status
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(BASE_DIR)
+try:
+    from version import SOFTWARE_NAME, SOFTWARE_VERSION
+except ImportError:
+    SOFTWARE_NAME = "NetCraft"
+    SOFTWARE_VERSION = "1.0.0"
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_activation_key(request):
+    """
+    Yeh API frontend se 64-bit key legi aur verify karegi.
+    """
+    secret_key = request.data.get('secret_key', '')
+
+    # 1. Strict 64-character Validation
+    if not secret_key or len(secret_key) != 64:
+        return Response(
+            {
+                "status": "error", 
+                "message": f"INVALID INTEGRITY: {SOFTWARE_NAME} requires exactly 64 characters."
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Note: Yahan future mein hum tere SystemLicense model se database check lagayenge.
+    # Abhi ke liye agar 64 char hain, toh API pass ho jayegi.
+
+    # 2. Success Response (Sending dynamic name back to frontend)
+    return Response(
+        {
+            "status": "success",
+            "software_name": SOFTWARE_NAME,
+            "version": SOFTWARE_VERSION,
+            "message": f"{SOFTWARE_NAME} Engine Initialized Successfully."
+        }, 
+        status=status.HTTP_200_OK
+    )
 
 # VIEWS STARTING HERE
 
@@ -300,3 +343,5 @@ def system_info_api(request):
 
     except Exception as e:
         return Response({"error": "Failed to load system info", "details": str(e)}, status=500)
+    
+
