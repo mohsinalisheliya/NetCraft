@@ -355,3 +355,18 @@ def system_info_api(request):
         return Response({"error": "Failed to load system info", "details": str(e)}, status=500)
     
 
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from apps.app_core.version import APP_NAME, APP_VERSION
+
+class SystemInfoView(APIView):
+    # AllowAny lagaya hai taaki Login, Setup, Dashboard har jagah yeh access ho sake
+    permission_classes = [AllowAny] 
+
+    def get(self, request):
+        return Response({
+            "app_name": APP_NAME,
+            "version": APP_VERSION
+        })

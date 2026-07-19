@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios'; // 🔧 NAYA: Axios import kiya API call ke liye
 import { 
   ShieldCheck, Cpu, UploadCloud, Clock, CheckCircle, 
   Moon, Sun, Monitor, Briefcase, Database 
@@ -6,15 +7,32 @@ import {
 
 function Dashboard() {
   const [isDark, setIsDark] = useState(true);
-  
-  // 🔧 FIX 1: Iska naam 'netcraft_ui_style' kar diya taaki Setup wale Light/Dark mode ('netcraft_theme') se na takraye
   const [themeName, setThemeName] = useState(localStorage.getItem('netcraft_ui_style') || 'enterprise');
+  
+  // 🔧 NAYA: Backend se aane wale Name aur Version ko store karne ke liye state
+  const [sysInfo, setSysInfo] = useState({ name: 'System Loading...', version: '...' });
 
-  // Change hone par naya UI style save karne ke liye
+  // Theme save karne ke liye
   useEffect(() => {
     localStorage.setItem('netcraft_ui_style', themeName);
   }, [themeName]);
 
+  // 🔗 ASLI JADU: Backend se APP_NAME aur VERSION uthana
+  useEffect(() => {
+    axios.get('http://localhost:8000/api/core/system-info/')
+      .then(response => {
+        setSysInfo({
+          name: response.data.app_name,
+          version: response.data.version
+        });
+      })
+      .catch(error => {
+        console.error("Engine se System Info nahi mili", error);
+        // Agar backend band hua, to default fallback
+        setSysInfo({ name: 'NetCraft (Offline)', version: '1.0.0' });
+      });
+  }, []);
+           
   const themes = {
     retro: { 
       bg: isDark ? 'bg-[#000080]' : 'bg-[#c0c0c0]', 
@@ -58,7 +76,6 @@ function Dashboard() {
     }
   };
 
-  // 🔧 FIX 2: Safety Net (Fallback). Agar galti se koi galat theme name aa bhi jaye, toh app crash na ho aur 'enterprise' load kar le.
   const t = themes[themeName] || themes['enterprise'];
 
   return (
@@ -66,10 +83,12 @@ function Dashboard() {
       
       <header className={`flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b ${t.border}`}>
         <div className="mb-4 md:mb-0">
+          {/* 🚀 BINGO! Yahan backend se aaya naam dikhega */}
           <h1 className={`text-4xl font-extrabold tracking-tight ${t.accent}`}>
-            NetCraft_OS
+            {sysInfo.name}
           </h1>
-          <p className="opacity-70 mt-1 uppercase text-xs font-semibold">License Middleware Engine v1.0.0</p>
+          {/* 🚀 Yahan backend se aaya version dikhega */}
+          <p className="opacity-70 mt-1 uppercase text-xs font-semibold">License Middleware Engine v{sysInfo.version}</p>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -97,6 +116,7 @@ function Dashboard() {
         </div>
       </header>
 
+      {/* ... Baaki ka Dashboard Same Rahega ... */}
       <div className={`mb-8 p-4 border ${t.border} ${t.radius} ${t.card} flex items-center justify-between`}>
         <div className="flex items-center gap-3">
           <CheckCircle size={24} className={t.accent} />
@@ -154,7 +174,7 @@ function Dashboard() {
         </div>
         <h2 className="text-2xl font-bold mb-3 uppercase">Offline System Patch</h2>
         <p className="opacity-80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-          DRAG AND DROP THE VERIFIED NETCRAFT [.ZIP] PATCH FILE HERE TO SECURELY UPGRADE SYSTEM OFFLINE.
+          DRAG AND DROP THE VERIFIED {sysInfo.name.toUpperCase()} [.ZIP] PATCH FILE HERE TO SECURELY UPGRADE SYSTEM OFFLINE.
         </p>
         <button className={`py-3 px-8 uppercase tracking-wider cursor-pointer ${t.btn} ${t.radius}`}>
           Browse Patch File
