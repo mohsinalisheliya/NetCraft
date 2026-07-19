@@ -144,11 +144,21 @@ class SystemLogViewSet(viewsets.ModelViewSet):
     serializer_class = SystemLogSerializer
     permission_classes = [IsAuthenticated]
 
-class CompanyProfileViewSet(viewsets.ModelViewSet):
-    queryset = CompanyProfile.objects.all().order_by('-created_at')
-    serializer_class = CompanyProfileSerializer
-    permission_classes = [IsAuthenticated]
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework import viewsets
 
+class CompanyProfileViewSet(viewsets.ModelViewSet):
+    queryset = CompanyProfile.objects.all()
+    serializer_class = CompanyProfileSerializer
+    
+    # 🛡️ SECURITY BYPASS LOGIC:
+    def get_permissions(self):
+        if self.action == 'create':
+            # Naya setup karte waqt (POST) kisi token ki zaroorat nahi
+            return [AllowAny()]
+        # Baaki sab cheezon (GET, PUT, PATCH) ke liye JWT Token compulsory hai
+        return [IsAuthenticated()]
+    
 class SystemLicenseViewSet(viewsets.ModelViewSet):
     queryset = SystemLicense.objects.all().order_by('-activation_date')
     serializer_class = SystemLicenseSerializer

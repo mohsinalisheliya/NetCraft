@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, Cpu, UploadCloud, Clock, CheckCircle, 
   Moon, Sun, Monitor, Briefcase, Database 
@@ -6,8 +6,14 @@ import {
 
 function Dashboard() {
   const [isDark, setIsDark] = useState(true);
-  // LocalStorage se save ki hui theme uthao, warna default 'enterprise' rakh lo
-  const [themeName, setThemeName] = useState(localStorage.getItem('netcraft_theme') || 'enterprise');
+  
+  // 🔧 FIX 1: Iska naam 'netcraft_ui_style' kar diya taaki Setup wale Light/Dark mode ('netcraft_theme') se na takraye
+  const [themeName, setThemeName] = useState(localStorage.getItem('netcraft_ui_style') || 'enterprise');
+
+  // Change hone par naya UI style save karne ke liye
+  useEffect(() => {
+    localStorage.setItem('netcraft_ui_style', themeName);
+  }, [themeName]);
 
   const themes = {
     retro: { 
@@ -52,7 +58,8 @@ function Dashboard() {
     }
   };
 
-  const t = themes[themeName];
+  // 🔧 FIX 2: Safety Net (Fallback). Agar galti se koi galat theme name aa bhi jaye, toh app crash na ho aur 'enterprise' load kar le.
+  const t = themes[themeName] || themes['enterprise'];
 
   return (
     <div className={`min-h-screen p-6 md:p-10 transition-colors duration-500 ${t.bg} ${t.text} ${t.fontFamily} ${t.fontSize}`}>
@@ -69,7 +76,7 @@ function Dashboard() {
           <div className="flex items-center justify-end gap-2">
             <button 
               onClick={() => setIsDark(!isDark)}
-              className={`flex items-center gap-2 px-4 py-2 border ${t.border} ${t.radius} hover:opacity-70 transition-all`}
+              className={`flex items-center gap-2 px-4 py-2 border ${t.border} ${t.radius} hover:opacity-70 transition-all cursor-pointer`}
             >
               {isDark ? <Sun size={16} /> : <Moon size={16} />}
               <span className="text-xs uppercase font-bold">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
@@ -77,13 +84,13 @@ function Dashboard() {
           </div>
 
           <div className="flex gap-2 justify-end">
-            <button onClick={() => setThemeName('retro')} className={`p-2 border ${themeName === 'retro' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="1990s Database (Old Uncle)">
+            <button onClick={() => setThemeName('retro')} className={`p-2 border cursor-pointer ${themeName === 'retro' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="1990s Database (Old Uncle)">
               <Database size={20} />
             </button>
-            <button onClick={() => setThemeName('enterprise')} className={`p-2 border ${themeName === 'enterprise' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="Enterprise (Professional)">
+            <button onClick={() => setThemeName('enterprise')} className={`p-2 border cursor-pointer ${themeName === 'enterprise' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="Enterprise (Professional)">
               <Briefcase size={20} />
             </button>
-            <button onClick={() => setThemeName('modern')} className={`p-2 border ${themeName === 'modern' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="Modern (Sleek)">
+            <button onClick={() => setThemeName('modern')} className={`p-2 border cursor-pointer ${themeName === 'modern' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="Modern (Sleek)">
               <Monitor size={20} />
             </button>
           </div>
@@ -149,7 +156,7 @@ function Dashboard() {
         <p className="opacity-80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
           DRAG AND DROP THE VERIFIED NETCRAFT [.ZIP] PATCH FILE HERE TO SECURELY UPGRADE SYSTEM OFFLINE.
         </p>
-        <button className={`py-3 px-8 uppercase tracking-wider ${t.btn} ${t.radius}`}>
+        <button className={`py-3 px-8 uppercase tracking-wider cursor-pointer ${t.btn} ${t.radius}`}>
           Browse Patch File
         </button>
       </div>

@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react'; // 🔧 Naya: useEffect import kiya
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Activation from './pages/Activation';
-import Setup from './pages/Setup'; // Naya Setup page import kiya
+import Setup from './pages/Setup';
 
 // SMART SECURITY GUARD
 const RouteGuard = ({ children, requireSetup = true }) => {
@@ -23,6 +23,26 @@ const RouteGuard = ({ children, requireSetup = true }) => {
 };
 
 function App() {
+  
+  // 🎨 GLOBAL THEME APPLIER (App load hote hi theme lagayega)
+  useEffect(() => {
+    const theme = localStorage.getItem('netcraft_theme') || 'dark';
+    const root = document.documentElement;
+    
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else if (theme === 'light') {
+      root.classList.remove('dark');
+    } else {
+      // Auto (System) mode ke liye
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    }
+  }, []); // [] ka matlab hai yeh app khulte hi sirf ek baar chalega
+
   return (
     <Router>
       <Routes>

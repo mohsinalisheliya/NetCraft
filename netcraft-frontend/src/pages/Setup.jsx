@@ -1,105 +1,171 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Palette, Building, CheckCircle2 } from 'lucide-react';
+import { Building2, ServerCrash, ArrowRight, Moon, Sun, Monitor } from 'lucide-react';
+import axios from 'axios';
 
 function Setup() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    orgName: '',
-    theme: 'enterprise'
-  });
+  const [orgName, setOrgName] = useState('');
+  
+  // Pehle se save ki hui theme check karo, warna 'dark' default rakho
+  const [theme, setTheme] = useState(localStorage.getItem('netcraft_theme') || 'dark'); 
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleComplete = (e) => {
+  // 🎨 INSTANT THEME CHANGER FUNCTION
+  const changeTheme = (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('netcraft_theme', newTheme);
+    
+    const root = document.documentElement;
+    if (newTheme === 'dark') {
+      root.classList.add('dark');
+    } else if (newTheme === 'light') {
+      root.classList.remove('dark');
+    } else {
+      // System (Auto) Mode check
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    }
+  };
+
+  // Jab page pehli baar load ho, toh purani theme apply kar do
+  useEffect(() => {
+    changeTheme(theme);
+  }, []);
+
+  const handleSetup = async (e) => {
     e.preventDefault();
+    setError('');
+
+    if (orgName.trim().length < 3) {
+      setError('Organization name must be at least 3 characters long.');
+      return;
+    }
+
     setLoading(true);
 
-    setTimeout(() => {
-      // 1. Setup complete ka tag memory mein daal do
+    try {
+      await axios.post('http://localhost:8000/api/core/company-profile/', {
+        company_name: orgName
+      });
+
       localStorage.setItem('netcraft_setup_complete', 'true');
+      localStorage.setItem('netcraft_org_name', orgName);
       
-      // 2. User ki chuni hui theme aur naam save kar lo
-      localStorage.setItem('netcraft_theme', formData.theme);
-      localStorage.setItem('netcraft_org', formData.orgName);
-      
-      // 3. Setup hone ke baad Login page par bhej do
+      // Theme pehle hi save ho chuki hai instant click par
       navigate('/login');
-    }, 1500);
+
+    } catch (err) {
+      if (err.response && err.response.data) {
+        const errorMsg = err.response.data.detail || JSON.stringify(err.response.data);
+        setError(`API Error: ${errorMsg}`);
+      } else {
+        setError('SERVER OFFLINE: Unable to connect to the Engine.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 font-sans text-slate-200">
-      <div className="w-full max-w-2xl bg-slate-800 border border-slate-700 p-10 rounded-2xl shadow-2xl relative">
+    // 🌗 Yahan 'dark:' classes ka jaadu dekho
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6 font-sans text-gray-900 dark:text-slate-200 transition-colors duration-300">
+      
+      <div className="w-full max-w-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-10 rounded-2xl shadow-2xl relative transition-colors duration-300">
         
-        <div className="flex justify-center mb-6 text-blue-500">
-          <Settings size={56} strokeWidth={1.5} className="animate-[spin_4s_linear_infinite]" />
+        {/* Header */}
+        <div className="flex justify-center mb-6 text-blue-600 dark:text-blue-500">
+          <Building2 size={56} strokeWidth={1.5} />
         </div>
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">System Initialization</h1>
-          <p className="text-blue-400 text-sm font-semibold uppercase tracking-wider">
-            Configure Your NetCraft Environment
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-2 transition-colors">Workspace Setup</h1>
+          <p className="text-blue-600 dark:text-blue-400 text-sm font-semibold uppercase tracking-wider transition-colors">
+            Configure Your {import.meta.env.VITE_APP_NAME} Environment
           </p>
         </div>
 
-        <form onSubmit={handleComplete} className="space-y-8">
+        {error && (
+          <div className="bg-red-100 dark:bg-red-500/10 border border-red-400 dark:border-red-500 text-red-600 dark:text-red-500 p-4 mb-6 rounded-lg flex items-start gap-3 text-sm font-semibold overflow-hidden">
+            <ServerCrash size={20} className="flex-shrink-0 mt-0.5" />
+            <span className="break-all">{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSetup} className="space-y-8">
           
-          {/* Setting 1: Organization Name */}
-          <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700">
-            <label className="flex items-center gap-2 text-slate-300 text-sm font-bold mb-4 uppercase tracking-wider">
-              <Building size={18} className="text-blue-400" />
-              Organization / ISP Name
+          {/* Organization Name Input */}
+          <div>
+            <label className="block text-gray-600 dark:text-slate-400 text-xs font-bold mb-3 uppercase tracking-wider text-center transition-colors">
+              Organization / Company Name
             </label>
             <input 
               type="text" 
               required
-              value={formData.orgName}
-              onChange={(e) => setFormData({...formData, orgName: e.target.value})}
-              className="w-full bg-slate-900 border border-slate-600 text-white rounded-lg py-3 px-4 focus:outline-none focus:border-blue-500 transition-colors"
-              placeholder="e.g. Reliance Jio or My Local ISP"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              className="w-full bg-gray-100 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 text-blue-700 dark:text-blue-400 text-center rounded-xl py-4 px-4 focus:outline-none focus:border-blue-500 transition-colors font-bold text-lg shadow-inner"
+              placeholder="e.g. Stark Industries"
             />
           </div>
 
-          {/* Setting 2: Default Theme Selection */}
-          <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700">
-            <label className="flex items-center gap-2 text-slate-300 text-sm font-bold mb-4 uppercase tracking-wider">
-              <Palette size={18} className="text-blue-400" />
-              Select Default Interface Theme
+          {/* 🎨 Theme Selector Area */}
+          <div>
+            <label className="block text-gray-600 dark:text-slate-400 text-xs font-bold mb-3 uppercase tracking-wider text-center transition-colors">
+              System Interface Theme
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              <div 
-                onClick={() => setFormData({...formData, theme: 'retro'})}
-                className={`cursor-pointer border-2 rounded-lg p-4 text-center transition-all ${formData.theme === 'retro' ? 'border-blue-500 bg-blue-500/10' : 'border-slate-700 hover:border-slate-500'}`}
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => changeTheme('light')}
+                className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                  theme === 'light' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' 
+                    : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-500 dark:text-slate-500 hover:border-gray-300 dark:hover:border-slate-500'
+                }`}
               >
-                <div className="font-mono text-xs mb-2 text-slate-400">1990s MySQL</div>
-                <div className="font-bold">Retro Database</div>
-              </div>
+                <Sun size={24} className="mb-2" />
+                <span className="text-xs font-bold uppercase">Light</span>
+              </button>
 
-              <div 
-                onClick={() => setFormData({...formData, theme: 'enterprise'})}
-                className={`cursor-pointer border-2 rounded-lg p-4 text-center transition-all ${formData.theme === 'enterprise' ? 'border-blue-500 bg-blue-500/10' : 'border-slate-700 hover:border-slate-500'}`}
+              <button
+                type="button"
+                onClick={() => changeTheme('dark')}
+                className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                  theme === 'dark' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' 
+                    : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-500 dark:text-slate-500 hover:border-gray-300 dark:hover:border-slate-500'
+                }`}
               >
-                <div className="font-sans text-xs mb-2 text-blue-400">Professional</div>
-                <div className="font-bold">Enterprise Blue</div>
-              </div>
+                <Moon size={24} className="mb-2" />
+                <span className="text-xs font-bold uppercase">Dark</span>
+              </button>
 
-              <div 
-                onClick={() => setFormData({...formData, theme: 'modern'})}
-                className={`cursor-pointer border-2 rounded-lg p-4 text-center transition-all ${formData.theme === 'modern' ? 'border-blue-500 bg-blue-500/10' : 'border-slate-700 hover:border-slate-500'}`}
+              <button
+                type="button"
+                onClick={() => changeTheme('system')}
+                className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                  theme === 'system' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' 
+                    : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 text-gray-500 dark:text-slate-500 hover:border-gray-300 dark:hover:border-slate-500'
+                }`}
               >
-                <div className="font-sans font-light text-xs mb-2 text-cyan-400">Sleek & Glass</div>
-                <div className="font-bold">Modern UI</div>
-              </div>
-
+                <Monitor size={24} className="mb-2" />
+                <span className="text-xs font-bold uppercase">Auto</span>
+              </button>
             </div>
           </div>
 
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl uppercase tracking-wider transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 flex justify-center items-center gap-2"
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl uppercase tracking-wider transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {loading ? 'Applying Settings...' : <><CheckCircle2 size={20} /> Complete Setup</>}
+            {loading ? 'Configuring Workspace...' : 'Continue to Login'}
+            {!loading && <ArrowRight size={18} />}
           </button>
         </form>
 
