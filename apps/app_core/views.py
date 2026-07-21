@@ -359,15 +359,17 @@ def system_info_api(request):
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from .version import APP_NAME, APP_VERSION
+from version import SOFTWARE_NAME, SOFTWARE_VERSION
 
-class SystemInfoView(APIView):
-    # 🔧 NAYA FIX: In dono lines ko khali aur AllowAny chhodna hai
-    authentication_classes = [] 
-    permission_classes = [AllowAny] 
+from django.views import View
+from django.http import JsonResponse
 
-    def get(self, request):
-        return Response({
-            "app_name": APP_NAME,
-            "version": APP_VERSION
+
+# Ab yeh DRF (APIView) nahi, balki pure native Django View par chalega
+class SystemInfoView(View):
+    def get(self, request, *args, **kwargs):
+        # Seedha JSON bhej do, bina kisi DRF token check ke
+        return JsonResponse({
+            "app_name": SOFTWARE_NAME,
+            "version": SOFTWARE_VERSION
         })

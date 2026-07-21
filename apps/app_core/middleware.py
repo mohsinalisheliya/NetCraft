@@ -1,6 +1,6 @@
 import uuid
 from django.http import JsonResponse
-from .models import SystemLicense # <--- IMPORT CHANGE KIYA
+from .models import SystemLicense
 
 
 import threading
@@ -27,8 +27,12 @@ class LicenseMiddleware:
         return ':'.join(('%012X' % mac)[i:i+2] for i in range(0, 12, 2))
 
     def __call__(self, request):
-        # 1. Bypass system routes
-        if request.path.startswith('/admin/') or request.path.startswith('/static/') or request.path.startswith('/media/') or request.path == '/favicon.ico':
+        # 1. Bypass system routes & Public APIs (🚀 YAHAN FIX KIYA HAI)
+        if (request.path.startswith('/admin/') or 
+            request.path.startswith('/static/') or 
+            request.path.startswith('/media/') or 
+            request.path.startswith('/api/core/system-info/') or  # <-- Yeh line add ki hai
+            request.path == '/favicon.ico'):
             return self.get_response(request)
 
         current_mac = self.get_mac_address()
