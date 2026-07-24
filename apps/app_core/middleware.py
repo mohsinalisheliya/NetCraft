@@ -50,13 +50,12 @@ class LicenseMiddleware:
 
         license_key = system_license.license_key
 
-        # 3. Hardware Validation Logic (GEZT-MNRY... type validation will come here)
-        is_valid = True 
-        
-        if not is_valid:
+        # 3. 🔥 ANTI-PIRACY HARDWARE VALIDATION 🔥
+        # Live HWID aur Database HWID ko compare karo
+        if str(system_license.hardware_mac) != str(current_mac):
             return JsonResponse({
-                "error": "LICENSE EXPIRED OR INVALID", 
-                "message": "This software copy is unauthorized or expired. Contact NetCraft Support.",
+                "error": "UNAUTHORIZED DEVICE DETECTED", 
+                "message": "Security Alert: System database was moved or copied to an unregistered machine. Access Revoked.",
                 "your_hardware_id": current_mac
             }, status=403)
 
