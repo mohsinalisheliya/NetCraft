@@ -1,182 +1,234 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios'; // 🔧 NAYA: Axios import kiya API call ke liye
+import axios from 'axios';
 import { 
   ShieldCheck, Cpu, UploadCloud, Clock, CheckCircle, 
-  Moon, Sun, Monitor, Briefcase, Database 
+  Moon, Sun, Monitor, Briefcase, Database,
+  Eye, EyeOff, Copy, Check, RefreshCw
 } from 'lucide-react';
 
 function Dashboard() {
+  // --- STATES ---
   const [isDark, setIsDark] = useState(true);
   const [themeName, setThemeName] = useState(localStorage.getItem('netcraft_ui_style') || 'enterprise');
   
-  // 🔧 NAYA: Backend se aane wale Name aur Version ko store karne ke liye state
   const [sysInfo, setSysInfo] = useState({ name: 'System Loading...', version: '...' });
+  const [licenseData, setLicenseData] = useState({
+    status: 'LOADING...', remainingDays: '...', modules: '...', key: '...', mac: '...', exactExpiry: '...'
+  });
 
-  // Theme save karne ke liye
-  useEffect(() => {
-    localStorage.setItem('netcraft_ui_style', themeName);
-  }, [themeName]);
+  // 🚀 NAYE STATES (Hide/Unhide, Copy, aur Update Checking ke liye)
+  const [showKey, setShowKey] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState('Click the button below to check servers.');
 
-  // 🔗 ASLI JADU: Backend se APP_NAME aur VERSION uthana
+  // --- EFFECTS ---
+  useEffect(() => { localStorage.setItem('netcraft_ui_style', themeName); }, [themeName]);
+
   useEffect(() => {
     axios.get('http://localhost:8000/api/core/system-info/')
-      .then(response => {
-        setSysInfo({
-          name: response.data.app_name,
-          version: response.data.version
+      .then(res => setSysInfo({ name: res.data.app_name, version: res.data.version }))
+      .catch(() => setSysInfo({ name: 'NetCraft (Offline)', version: '1.0.0' }));
+  }, []);
+
+  useEffect(() => {
+    axios.get('http://localhost:8000/api/core/license-status/')
+      .then(res => {
+        const info = res.data.license_info || {};
+        setLicenseData({
+          status: info.status ? info.status.toUpperCase() : 'UNKNOWN', 
+          remainingDays: info.remaining_days !== undefined ? info.remaining_days : '0',
+          modules: info.allowed_modules && info.allowed_modules.length > 0 ? info.allowed_modules.join(', ') : 'NONE',
+          key: info.secret_key || 'NO-KEY-FOUND',
+          mac: info.hardware_mac || 'UNKNOWN MAC',
+          exactExpiry: info.expiry_exact_date || 'Lifetime'
         });
       })
-      .catch(error => {
-        console.error("Engine se System Info nahi mili", error);
-        // Agar backend band hua, to default fallback
-        setSysInfo({ name: 'NetCraft (Offline)', version: '1.0.0' });
+      .catch(() => {
+        setLicenseData({ status: 'ERROR', remainingDays: '0', modules: 'ERROR', key: 'NO-KEY', mac: 'UNKNOWN', exactExpiry: 'Error' });
       });
   }, []);
-           
-  const themes = {
-    retro: { 
-      bg: isDark ? 'bg-[#000080]' : 'bg-[#c0c0c0]', 
-      text: isDark ? 'text-white' : 'text-black',
-      card: isDark 
-        ? 'bg-[#0000aa] border-[3px] border-white shadow-[6px_6px_0px_#c0c0c0]' 
-        : 'bg-[#c0c0c0] border-t-[3px] border-l-[3px] border-white border-b-[3px] border-r-[3px] border-gray-600',
-      accent: isDark ? 'text-yellow-400' : 'text-blue-900', 
-      iconBg: 'bg-transparent',
-      btn: isDark 
-        ? 'bg-yellow-400 text-[#000080] border-2 border-white hover:bg-white uppercase font-extrabold transition-none' 
-        : 'bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-gray-800 text-black uppercase font-bold transition-none hover:bg-[#d0d0d0]',
-      radius: 'rounded-none',
-      border: isDark ? 'border-white' : 'border-gray-500',
-      fontFamily: 'font-mono tracking-widest', 
-      fontSize: 'text-base uppercase font-bold' 
-    },
-    enterprise: { 
-      bg: isDark ? 'bg-slate-900' : 'bg-slate-50',
-      text: isDark ? 'text-slate-200' : 'text-slate-800',
-      card: isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-300',
-      accent: isDark ? 'text-blue-400' : 'text-blue-600',
-      iconBg: isDark ? 'bg-blue-500/10' : 'bg-blue-100',
-      btn: 'bg-blue-600 hover:bg-blue-700 text-white font-semibold',
-      radius: 'rounded-lg',
-      border: isDark ? 'border-slate-700' : 'border-slate-300',
-      fontFamily: 'font-sans', 
-      fontSize: 'text-base'
-    },
-    modern: { 
-      bg: isDark ? 'bg-zinc-950' : 'bg-zinc-100',
-      text: isDark ? 'text-zinc-100' : 'text-zinc-900',
-      card: isDark ? 'bg-white/5 border-white/10 backdrop-blur-2xl shadow-2xl' : 'bg-white/60 border-white backdrop-blur-xl shadow-xl',
-      accent: isDark ? 'text-cyan-400' : 'text-blue-600',
-      iconBg: isDark ? 'bg-cyan-500/10' : 'bg-blue-100',
-      btn: 'bg-gradient-to-r from-blue-600 to-cyan-500 hover:opacity-90 text-white shadow-lg shadow-blue-500/30',
-      radius: 'rounded-3xl',
-      border: isDark ? 'border-white/10' : 'border-black/5',
-      fontFamily: 'font-sans font-light tracking-wide', 
-      fontSize: 'text-sm'
-    }
+
+  // --- FUNCTIONS ---
+  // Hardware MAC Copy karne ka function
+  const handleCopyMac = () => {
+    navigator.clipboard.writeText(licenseData.mac);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
+  // OTA Update Check karne ka function
+  const handleCheckUpdate = () => {
+    setIsChecking(true);
+    setUpdateMsg("Checking secure servers...");
+    
+    axios.get('http://localhost:8000/api/core/check-update/')
+      .then(res => {
+        setUpdateMsg(res.data.message);
+        setIsChecking(false);
+      })
+      .catch(err => {
+        setUpdateMsg("Failed to connect to update server.");
+        setIsChecking(false);
+      });
+  };
+
+  // --- THEMES CONFIG (Shortened for space, keeping your logic) ---
+  const themes = {
+    retro: { 
+      bg: isDark ? 'bg-[#000080]' : 'bg-[#c0c0c0]', text: isDark ? 'text-white' : 'text-black',
+      card: isDark ? 'bg-[#0000aa] border-[3px] border-white' : 'bg-[#c0c0c0] border-4 border-gray-600',
+      accent: isDark ? 'text-yellow-400' : 'text-blue-900', iconBg: 'bg-transparent',
+      btn: 'bg-yellow-400 text-black font-bold uppercase', radius: 'rounded-none', border: 'border-white',
+      fontFamily: 'font-mono tracking-widest', fontSize: 'text-sm font-bold',
+      inputBg: isDark ? 'bg-black/50' : 'bg-white/50'
+    },
+    enterprise: { 
+      bg: isDark ? 'bg-slate-900' : 'bg-slate-50', text: isDark ? 'text-slate-200' : 'text-slate-800',
+      card: isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-300',
+      accent: isDark ? 'text-blue-400' : 'text-blue-600', iconBg: isDark ? 'bg-blue-500/10' : 'bg-blue-100',
+      btn: 'bg-blue-600 text-white font-semibold', radius: 'rounded-lg', border: isDark ? 'border-slate-700' : 'border-slate-300',
+      fontFamily: 'font-sans', fontSize: 'text-base', inputBg: isDark ? 'bg-slate-900' : 'bg-slate-100'
+    },
+    modern: { 
+      bg: isDark ? 'bg-zinc-950' : 'bg-zinc-100', text: isDark ? 'text-zinc-100' : 'text-zinc-900',
+      card: isDark ? 'bg-white/5 border-white/10 backdrop-blur-2xl' : 'bg-white/60 border-white backdrop-blur-xl',
+      accent: isDark ? 'text-cyan-400' : 'text-blue-600', iconBg: isDark ? 'bg-cyan-500/10' : 'bg-blue-100',
+      btn: 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg', radius: 'rounded-3xl', border: isDark ? 'border-white/10' : 'border-black/5',
+      fontFamily: 'font-sans font-light tracking-wide', fontSize: 'text-sm', inputBg: isDark ? 'bg-black/20' : 'bg-white/40'
+    }
+  };
   const t = themes[themeName] || themes['enterprise'];
 
+  // Key Masking Logic
+  const displayKey = showKey 
+    ? licenseData.key 
+    : `****************************************`;
+
+  // --- RENDER ---
   return (
     <div className={`min-h-screen p-6 md:p-10 transition-colors duration-500 ${t.bg} ${t.text} ${t.fontFamily} ${t.fontSize}`}>
       
-      <header className={`flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b ${t.border}`}>
-        <div className="mb-4 md:mb-0">
-          {/* 🚀 BINGO! Yahan backend se aaya naam dikhega */}
-          <h1 className={`text-4xl font-extrabold tracking-tight ${t.accent}`}>
-            {sysInfo.name}
-          </h1>
-          {/* 🚀 Yahan backend se aaya version dikhega */}
-          <p className="opacity-70 mt-1 uppercase text-xs font-semibold">License Middleware Engine v{sysInfo.version}</p>
+      {/* HEADER SECTION (Same as before) */}
+      <header className={`flex justify-between items-center mb-8 pb-6 border-b ${t.border}`}>
+        <div>
+          <h1 className={`text-3xl font-extrabold tracking-tight ${t.accent}`}>{sysInfo.name}</h1>
+          <p className="opacity-70 mt-1 uppercase text-xs font-semibold">Engine v{sysInfo.version}</p>
         </div>
-
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-end gap-2">
-            <button 
-              onClick={() => setIsDark(!isDark)}
-              className={`flex items-center gap-2 px-4 py-2 border ${t.border} ${t.radius} hover:opacity-70 transition-all cursor-pointer`}
-            >
-              {isDark ? <Sun size={16} /> : <Moon size={16} />}
-              <span className="text-xs uppercase font-bold">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
-            </button>
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <button onClick={() => setThemeName('retro')} className={`p-2 border cursor-pointer ${themeName === 'retro' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="1990s Database (Old Uncle)">
-              <Database size={20} />
-            </button>
-            <button onClick={() => setThemeName('enterprise')} className={`p-2 border cursor-pointer ${themeName === 'enterprise' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="Enterprise (Professional)">
-              <Briefcase size={20} />
-            </button>
-            <button onClick={() => setThemeName('modern')} className={`p-2 border cursor-pointer ${themeName === 'modern' ? t.accent + ' ' + t.border : 'border-transparent opacity-50'} ${t.radius}`} title="Modern (Sleek)">
-              <Monitor size={20} />
-            </button>
+        <div className="flex gap-4">
+          <button onClick={() => setIsDark(!isDark)} className={`p-2 border ${t.border} ${t.radius}`}>
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setThemeName('retro')} className={`p-2 border ${t.border} ${t.radius}`}><Database size={18}/></button>
+            <button onClick={() => setThemeName('enterprise')} className={`p-2 border ${t.border} ${t.radius}`}><Briefcase size={18}/></button>
+            <button onClick={() => setThemeName('modern')} className={`p-2 border ${t.border} ${t.radius}`}><Monitor size={18}/></button>
           </div>
         </div>
       </header>
 
-      {/* ... Baaki ka Dashboard Same Rahega ... */}
-      <div className={`mb-8 p-4 border ${t.border} ${t.radius} ${t.card} flex items-center justify-between`}>
-        <div className="flex items-center gap-3">
-          <CheckCircle size={24} className={t.accent} />
-          <span className="font-bold">System Timed Plan Active & MAC Verified</span>
+      {/* 🚀 TOP ROW: 3 MAIN CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        
+        {/* CARD 1: License Status & Hide/Unhide Key */}
+        <div className={`border p-6 ${t.card} ${t.radius} flex flex-col justify-between`}>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="opacity-70 text-xs uppercase font-bold mb-1">License Status</p>
+              <h3 className="text-2xl font-bold flex items-center gap-2">
+                {licenseData.status} 
+                <span className={`w-3 h-3 rounded-full ${licenseData.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></span>
+              </h3>
+            </div>
+            <div className={`p-3 ${t.iconBg} ${t.radius} ${t.accent}`}><ShieldCheck size={28} /></div>
+          </div>
+          
+          <div className="mt-2">
+            <p className="text-[10px] uppercase opacity-70 mb-1">Current License Key</p>
+            <div className={`flex items-center justify-between p-2 border ${t.border} ${t.radius} ${t.inputBg}`}>
+              <span className="font-mono text-xs tracking-wider truncate mr-2">{displayKey}</span>
+              <button onClick={() => setShowKey(!showKey)} className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity">
+                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
         </div>
-        <span className={`px-3 py-1 text-xs uppercase border ${t.border} ${t.radius} ${t.accent}`}>Online</span>
+
+        {/* CARD 2: Expiry Days & Exact Time */}
+        <div className={`border p-6 ${t.card} ${t.radius}`}>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="opacity-70 text-xs uppercase font-bold mb-1">Time Remaining</p>
+              <h3 className="text-2xl font-bold">{licenseData.remainingDays} DAYS</h3>
+            </div>
+            <div className={`p-3 ${t.iconBg} ${t.radius} ${t.accent}`}><Clock size={28} /></div>
+          </div>
+          <div className={`mt-4 p-2 border ${t.border} ${t.radius} ${t.inputBg} text-center`}>
+            <p className="text-xs opacity-80">Expires: <span className="font-bold">{licenseData.exactExpiry}</span></p>
+          </div>
+        </div>
+
+        {/* CARD 3: Active Modules */}
+        <div className={`border p-6 ${t.card} ${t.radius}`}>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="opacity-70 text-xs uppercase font-bold mb-1">Active Modules</p>
+              <h3 className="text-2xl font-bold truncate max-w-[150px]">{licenseData.modules}</h3>
+            </div>
+            <div className={`p-3 ${t.iconBg} ${t.radius} ${t.accent}`}><Cpu size={28} /></div>
+          </div>
+          <p className="text-xs opacity-60 mt-4">RESTRICTED ACCESS: FALSE</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className={`border p-6 ${t.card} ${t.radius} transition-transform hover:scale-[1.02]`}>
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="opacity-70 text-xs uppercase font-bold mb-2">License Status</p>
-              <h3 className="text-2xl font-bold">VALID</h3>
-            </div>
-            <div className={`p-3 ${t.iconBg} ${t.radius} ${t.accent}`}>
-              <ShieldCheck size={28} />
-            </div>
+      {/* 🚀 MIDDLE ROW: Hardware ID & OTA Update */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        
+        {/* Hardware ID Copy Card */}
+        <div className={`border p-6 ${t.card} ${t.radius}`}>
+          <h3 className="text-lg font-bold mb-2 uppercase">Hardware Identification</h3>
+          <p className="text-xs opacity-70 mb-4">Provide this MAC ID to support for manual key generation or renewal.</p>
+          
+          <div className={`flex items-center justify-between p-4 border ${t.border} ${t.radius} ${t.inputBg}`}>
+            <span className="font-mono text-lg tracking-widest">{licenseData.mac}</span>
+            <button onClick={handleCopyMac} className={`p-2 cursor-pointer rounded hover:bg-black/10 transition-colors ${copied ? 'text-green-500' : t.accent}`}>
+              {copied ? <Check size={20} /> : <Copy size={20} />}
+            </button>
           </div>
-          <p className="text-xs opacity-60">KEY: NC-****-****-9A2F</p>
         </div>
 
-        <div className={`border p-6 ${t.card} ${t.radius} transition-transform hover:scale-[1.02]`}>
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="opacity-70 text-xs uppercase font-bold mb-2">Time to Expiry</p>
-              <h3 className="text-2xl font-bold">365 DAYS</h3>
-            </div>
-            <div className={`p-3 ${t.iconBg} ${t.radius} ${t.accent}`}>
-              <Clock size={28} />
-            </div>
+        {/* OTA Update Checker Card */}
+        <div className={`border p-6 ${t.card} ${t.radius} flex flex-col justify-between`}>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-bold uppercase">Software Update</h3>
+            <span className={`px-2 py-1 text-[10px] uppercase font-bold border ${t.border} rounded-full`}>Current: v{sysInfo.version}</span>
           </div>
-          <p className="text-xs opacity-60">RENEWAL: JULY 2027</p>
+          <p className="text-xs opacity-70 mb-4 text-center">{updateMsg}</p>
+          
+          <button 
+            onClick={handleCheckUpdate} 
+            disabled={isChecking}
+            className={`w-full py-3 flex items-center justify-center gap-2 uppercase tracking-wider cursor-pointer ${t.btn} ${t.radius} ${isChecking ? 'opacity-50' : ''}`}
+          >
+            <RefreshCw size={18} className={isChecking ? 'animate-spin' : ''} />
+            {isChecking ? 'Checking Servers...' : 'Check For Updates'}
+          </button>
         </div>
 
-        <div className={`border p-6 ${t.card} ${t.radius} transition-transform hover:scale-[1.02]`}>
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="opacity-70 text-xs uppercase font-bold mb-2">Active Modules</p>
-              <h3 className="text-2xl font-bold">CRM, DxR</h3>
-            </div>
-            <div className={`p-3 ${t.iconBg} ${t.radius} ${t.accent}`}>
-              <Cpu size={28} />
-            </div>
-          </div>
-          <p className="text-xs opacity-60">RESTRICTED ACCESS: FALSE</p>
-        </div>
       </div>
 
-      <div className={`border-2 border-dashed p-12 text-center transition-all ${t.card} ${t.border} ${t.radius} hover:opacity-90`}>
-        <div className="flex justify-center mb-6">
-          <div className={`p-5 ${t.iconBg} rounded-full ${t.accent}`}>
-            <UploadCloud size={48} strokeWidth={1.5} />
+      {/* 🚀 BOTTOM ROW: Offline Patch Drag & Drop */}
+      <div className={`border-2 border-dashed p-10 text-center transition-all ${t.card} ${t.border} ${t.radius} hover:opacity-90`}>
+        <div className="flex justify-center mb-4">
+          <div className={`p-4 ${t.iconBg} rounded-full ${t.accent}`}>
+            <UploadCloud size={40} strokeWidth={1.5} />
           </div>
         </div>
-        <h2 className="text-2xl font-bold mb-3 uppercase">Offline System Patch</h2>
-        <p className="opacity-80 text-sm mb-8 max-w-md mx-auto leading-relaxed">
+        <h2 className="text-xl font-bold mb-2 uppercase">Offline System Patch</h2>
+        <p className="opacity-80 text-xs mb-6 max-w-md mx-auto leading-relaxed">
           DRAG AND DROP THE VERIFIED {sysInfo.name.toUpperCase()} [.ZIP] PATCH FILE HERE TO SECURELY UPGRADE SYSTEM OFFLINE.
         </p>
-        <button className={`py-3 px-8 uppercase tracking-wider cursor-pointer ${t.btn} ${t.radius}`}>
+        <button className={`py-2 px-6 text-sm uppercase tracking-wider cursor-pointer border ${t.border} ${t.radius} hover:bg-white/10`}>
           Browse Patch File
         </button>
       </div>

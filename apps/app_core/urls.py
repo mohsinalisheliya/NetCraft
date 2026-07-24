@@ -19,7 +19,7 @@ urlpatterns = [
     path('install-update/', install_update_api, name='api-install-update'),
     path('manual-update/', manual_update_api, name='api-manual-update'),
     path('system-info/', SystemInfoView.as_view(), name='api-system-info'),
-    
+    path('license-status/', system_info_api, name='api-license-status'),
     # 🔧 FIX: Yahan se 'api/' hata diya hai taaki URL /api/core/verify-key/ bane
     path('verify-key/', verify_activation_key, name='verify_activation_key'),
     

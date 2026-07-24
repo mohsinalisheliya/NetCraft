@@ -296,8 +296,20 @@ def manual_update_api(request):
         return Response({"error": "Patch apply karne mein fail ho gaya.", "details": str(e)}, status=500)
 
 # -------------------- ABOUT SYSTEM (MASTER INFO API) --------------------
+
+import uuid # 🚀 YEH IMPORT SABSE UPAR ADD KARNA ZAROORI HAI
+import os
+import importlib.util
+from django.conf import settings
+from django.utils import timezone
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from .models import SystemLicense, SystemVersion
+
+# -------------------- ABOUT SYSTEM (MASTER INFO API) --------------------
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def system_info_api(request):
     try:
         # 1. License Data Fetch Kar
@@ -315,29 +327,38 @@ def system_info_api(request):
             spec.loader.exec_module(version_module)
             release_date = getattr(version_module, 'APP_RELEASE_DATE', 'Unknown')
 
-        # 4. 🔥 THE EXPIRY CALCULATOR LOGIC 🔥
+        
+        # 4. 🔥 LIVE HARDWARE MAC DETECTION (Numbers Only) 🔥
+        mac_node = uuid.getnode()
+        
+        live_mac_address = str(mac_node)
+
+        # 5. 🔥 THE EXPIRY CALCULATOR LOGIC 🔥
         remaining_days = 0
         show_expiry_warning = False
         expiry_date_str = "Lifetime"
+        expiry_exact = "Lifetime"
 
         if license_data and license_data.expiry_date:
             today = timezone.now().date()
             delta = license_data.expiry_date - today
             remaining_days = delta.days if delta.days > 0 else 0
             expiry_date_str = license_data.expiry_date.strftime("%d %B %Y")
+            expiry_exact = license_data.expiry_date.strftime("%d %b %Y, %I:%M %p")
             
-            # Agar 30 ya usse kam din bache hain (par 0 se zyada), toh warning on kar do
             if 0 < remaining_days <= 30:
                 show_expiry_warning = True
 
-        # 5. Data Format for React Frontend
+        # 6. Data Format for React Frontend
         response_data = {
             "license_info": {
-                "hardware_mac": license_data.hardware_mac if license_data else "Not Registered",
-                "secret_key": f"********{license_data.license_key[-4:]}" if license_data and license_data.license_key else "Missing",
+                # 👇 YAHAN DATABASE KI JAGAH LIVE MAC BHEJ RAHE HAIN
+                "hardware_mac": live_mac_address, 
+                "secret_key": license_data.license_key if license_data and license_data.license_key else "NO-KEY-FOUND",
                 "status": "Active" if license_data and license_data.is_active else "Inactive",
                 "allowed_modules": license_data.allowed_modules if license_data else [],
                 "expiry_date": expiry_date_str,
+                "expiry_exact_date": expiry_exact,
                 "remaining_days": remaining_days,
                 "show_expiry_warning": show_expiry_warning
             },
@@ -353,7 +374,6 @@ def system_info_api(request):
 
     except Exception as e:
         return Response({"error": "Failed to load system info", "details": str(e)}, status=500)
-    
 
 #--------------------------[System Info API View]-----------------------------------
 from rest_framework.views import APIView

@@ -11,19 +11,21 @@ function Activation() {
   const [copied, setCopied] = useState(false);
   const [hardwareKey, setHardwareKey] = useState('GENERATING...'); // Dynamic state
 
-  // ⚙️ SYSTEM LOGIC: Generate or Fetch Original Machine ID
+  // ⚙️ SYSTEM LOGIC: Fetch Original Machine ID from Backend
   useEffect(() => {
-    let storedHWID = localStorage.getItem('netcraft_hwid');
-    
-    if (!storedHWID) {
-      // Generate a completely original 16-character Hex ID for this machine
-      const generateHex = (size) => [...Array(size)].map(() => Math.floor(Math.random() * 16).toString(16).toUpperCase()).join('');
-      storedHWID = `NC-HWID-${generateHex(4)}-${generateHex(4)}-${generateHex(4)}-${generateHex(4)}`;
-      
-      // Lock it permanently in local storage
-      localStorage.setItem('netcraft_hwid', storedHWID);
-    }
-    setHardwareKey(storedHWID);
+    // Backend se live MAC address mangwa rahe hain
+    axios.get('http://localhost:8000/api/core/license-status/')
+      .then(response => {
+        const realMac = response.data.license_info?.hardware_mac || 'UNKNOWN-MAC';
+        setHardwareKey(realMac);
+        
+        // Setup ke liye local storage me bhi update kar do
+        localStorage.setItem('netcraft_hwid', realMac);
+      })
+      .catch(error => {
+        console.error("Backend se HWID fetch karne mein error:", error);
+        setHardwareKey('CONNECTION-ERROR');
+      });
   }, []);
 
   const handleCopy = () => {

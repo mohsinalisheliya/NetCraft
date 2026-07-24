@@ -24,14 +24,16 @@ class LicenseMiddleware:
 
     def get_mac_address(self):
         mac = uuid.getnode()
-        return ':'.join(('%012X' % mac)[i:i+2] for i in range(0, 12, 2))
+        # Yahan bhi hex formatting hata di hai
+        return str(mac)
 
     def __call__(self, request):
         # 1. Bypass system routes & Public APIs (🚀 YAHAN FIX KIYA HAI)
         if (request.path.startswith('/admin/') or 
             request.path.startswith('/static/') or 
             request.path.startswith('/media/') or 
-            request.path.startswith('/api/core/system-info/') or  # <-- Yeh line add ki hai
+            request.path.startswith('/api/core/system-info/') or
+            request.path.startswith('/api/core/license-status/') or 
             request.path == '/favicon.ico'):
             return self.get_response(request)
 
